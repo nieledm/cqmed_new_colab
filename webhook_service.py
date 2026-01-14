@@ -2,24 +2,30 @@ import requests
 import json
 import os
 
-# URL do seu Webhook no n8n (Coloque no .env depois!)
-# Lembre-se: O n8n tem URLs de "Test" e "Production". Use a de teste enquanto desenvolve.
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL_TESTE", "http://localhost:5678/webhook-test/onboarding-event")
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL_PRODUCTION", "http://localhost:5678/webhook-test/onboarding-event")
 
-def send_to_n8n(event_type, collaborator_name, date_obj, extra_info=""):
+def send_to_n8n(collaborator_name, 
+                      start_event_type, 
+                      start_date_obj, 
+                      start_extra_info,
+                      end_event_type, 
+                      end_date_obj, 
+                      end_extra_info,):
     """
     Envia dados para o n8n processar.
-    event_type: 'ONBOARDING_START', 'ONBOARDING_END', 'OFFBOARDING'
     """
-    if not date_obj:
+    if not start_date_obj:
         return
     
     # Prepara os dados (Payload)
     payload = {
-        "type": event_type,
         "name": collaborator_name,
-        "date": date_obj.strftime("%Y-%m-%d"),
-        "details": extra_info
+        "start_type": start_event_type,
+        "start_date": start_date_obj.strftime("%Y-%m-%d"),
+        "start_details": start_extra_info,
+        "end_type": end_event_type,
+        "end_date": end_date_obj.strftime("%Y-%m-%d"),
+        "end_details": end_extra_info
     }
 
     try:
@@ -27,7 +33,7 @@ def send_to_n8n(event_type, collaborator_name, date_obj, extra_info=""):
         response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=5)
         
         if response.status_code == 200:
-            print(f"✅ Sucesso: Evento enviado ao n8n ({event_type})")
+            print(f"✅ Sucesso: Evento enviado ao n8n - Início para {collaborator_name} em {start_date_obj.strftime('%Y-%m-%d')}")
         else:
             print(f"⚠️ Erro n8n: {response.status_code} - {response.text}")
             

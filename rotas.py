@@ -4,7 +4,6 @@ from funcoes import calculate_global_status, normalize_phone
 from datetime import datetime
 
 from webhook_service import send_to_n8n
-
 bp = Blueprint("main", __name__)
 
 # --- FUNÇÃO AUXILIAR PARA ORGANIZAR HIERARQUIA ---
@@ -144,18 +143,20 @@ def create_request():
         if new_req.category:
              cat_name = new_req.category.name
         
-        # 1. Agendar o INÍCIO
         if new_req.start_date:
             info_inicio = f"Categoria: {cat_name} | WhatsApp: {new_req.whatsapp_number}"
-            
-            send_to_n8n("ONBOARDING_START", new_req.collaborator_name, new_req.start_date, info_inicio)
-        
-        # 2. Agendar o TÉRMINO PREVISTO
-        if new_req.end_date:
             info_fim = f"Data prevista no contrato. Verificar renovação."
+            send_to_n8n(new_req.collaborator_name, "INICIO DO COLABORADOR ", new_req.start_date, info_inicio, "FINALIZAÇÃO DO COLABORADOR ", new_req.end_date, info_fim)
             
-            send_to_n8n("CONTRACT_END", new_req.collaborator_name, new_req.end_date, info_fim)
-            
+
+            # def send_to_n8n(collaborator_name, 
+            #           start_event_type, 
+            #           start_date_obj, 
+            #           start_extra_info,
+            #           end_event_type, 
+            #           end_date_obj, 
+            #           end_extra_info,):
+                    
     except Exception as e:
         print(f"Erro ao enviar para n8n: {e}") 
     # -----------------------------------------------------
