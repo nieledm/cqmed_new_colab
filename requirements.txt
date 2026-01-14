@@ -1,0 +1,8 @@
+Flask>=2.0
+Flask-SQLAlchemy>=2.5
+Flask-Migrate>=4.0.4
+PyMySQL>=1.0.2
+cryptography>=46.0.3
+dotenv>=0.21.0
+requests>=2.31.0
+phonenumbers>=8.13.20   

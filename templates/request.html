@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detalhes da Solicitação - {{ req.request_type }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="container-fluid mt-4 fade-in">
+
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm mb-2">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar para lista
+                </a>
+                <h4 class="mb-0">
+                    Detalhes da Solicitação 
+                    {% if req.request_type == 'OFFBOARDING' %}
+                        <span class="badge bg-danger ms-2">DESLIGAMENTO</span>
+                    {% else %}
+                        <span class="badge bg-success ms-2">ADMISSÃO</span>
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="d-flex gap-2">
+                {% if req.request_type == 'ONBOARDING' and global_status == 'concluido' %}
+                <form action="{{ url_for('main.create_revocation', request_id=req.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja iniciar o processo de desligamento para este colaborador?');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-user-times me-2"></i>Iniciar Desligamento
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if global_status == "aguardando" %}
+                    <span class="badge bg-warning fs-6 d-flex align-items-center"><i class="fas fa-clock me-1"></i>Aguardando</span>
+                {% elif global_status == "em_andamento" %}
+                    <span class="badge bg-primary fs-6 d-flex align-items-center"><i class="fas fa-sync-alt me-1"></i>Em andamento</span>
+                {% else %}
+                    <span class="badge bg-success fs-6 d-flex align-items-center"><i class="fas fa-check-circle me-1"></i>Concluído</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Dados do Colaborador</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fas fa-user me-2 text-primary"></i>Nome:</span>
+                            <span>{{ req.collaborator_name }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fas fa-tag me-2 text-primary"></i>Categoria:</span>
+                            <span class="badge bg-primary">{{ req.category.name if req.category else 'Padrão' }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fas fa-envelope me-2 text-primary"></i>Email:</span>
+                            <span>{{ req.email_contact or '—' }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i>Início:</span>
+                            <span>{{ req.start_date.strftime('%d/%m/%Y') if req.start_date else '—' }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fas fa-calendar-check me-2 text-primary"></i>Término:</span>
+                            <span>{{ req.end_date.strftime('%d/%m/%Y') if req.end_date else '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Checklist de Execução</h5>
+                    <span class="badge bg-info">{{ req.checklist_items|length }} itens</span>
+                </div>
+                <div class="card-body">
+                    
+                    {% set total = req.checklist_items|length %}
+                    {% set done_count = req.checklist_items|selectattr('status', 'equalto', 'done')|list|length %}
+                    {% set progress = (done_count / total * 100) if total > 0 else 0 %}
+                    
+                    <div class="progress mb-2" style="height: 10px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%"></div>
+                    </div>
+                    <p class="text-muted small mb-4 text-end">
+                        {{ done_count }} / {{ total }} concluídos ({{ progress|round|int }}%)
+                    </p>
+
+                    <div class="checklist-container">
+                        {% for area_name, items in checklist_tree.items() %}
+                            
+                            <h6 class="text-uppercase text-muted fw-bold mt-4 mb-2 border-bottom pb-1">
+                                <i class="fas fa-layer-group me-2"></i>{{ area_name }}
+                            </h6>
+
+                            {% for item in items %}
+                            <div class="checklist-group-item mb-2 p-3 rounded border bg-white shadow-sm">
+                                
+                                <form action="{{ url_for('main.toggle_checklist', item_id=item.id) }}" method="POST" class="d-flex align-items-center">
+                                    
+                                    {% set is_checked = (req.request_type == 'ONBOARDING' and item.status == 'done') or 
+                                                        (req.request_type == 'OFFBOARDING' and item.status == 'pending') %}
+                                    
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" onchange="this.form.submit()" style="cursor: pointer; transform: scale(1.2);" {% if is_checked %}checked{% endif %}>
+                                    </div>
+
+                                    <div class="ms-3 flex-grow-1">
+                                        <span class="fw-bold {{ 'text-decoration-line-through text-muted' if req.request_type == 'OFFBOARDING' and item.status == 'done' }}">
+                                            {{ item.description }}
+                                        </span>
+                                        
+                                        {% if item.status == 'done' and req.request_type == 'ONBOARDING' %}
+                                            <span class="badge bg-success ms-2"><i class="fas fa-check"></i> Feito</span>
+                                        {% elif item.status == 'done' and req.request_type == 'OFFBOARDING' %}
+                                            <span class="badge bg-danger ms-2"><i class="fas fa-ban"></i> Revogado</span>
+                                        {% endif %}
+                                    </div>
+                                </form>
+
+                                {% if item.children_list %}
+                                    <div class="subitems mt-2 ms-5 ps-3 border-start border-3 border-light">
+                                        {% for child in item.children_list %}
+                                            <div class="checklist-subitem py-2 border-bottom border-light">
+                                                <form action="{{ url_for('main.toggle_checklist', item_id=child.id) }}" method="POST" class="d-flex align-items-center">
+                                                    
+                                                    {% set child_checked = (req.request_type == 'ONBOARDING' and child.status == 'done') or 
+                                                                           (req.request_type == 'OFFBOARDING' and child.status == 'pending') %}
+                                                    
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" onchange="this.form.submit()" {% if child_checked %}checked{% endif %}>
+                                                    </div>
+                                                    
+                                                    <div class="ms-2">
+                                                        <span class="{{ 'text-decoration-line-through text-muted' if req.request_type == 'OFFBOARDING' and child.status == 'done' }}">
+                                                            {{ child.description }}
+                                                        </span>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                        
+                        {% if not checklist_tree %}
+                            <div class="alert alert-warning text-center">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Nenhum item de checklist encontrado.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-2 mb-5">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h5>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i>Imprimir
+                </button>
+                <button class="btn btn-outline-info">
+                    <i class="fas fa-envelope me-2"></i>Notificar Usuário
+                </button>
+                <button class="btn btn-outline-warning">
+                    <i class="fas fa-edit me-2"></i>Editar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

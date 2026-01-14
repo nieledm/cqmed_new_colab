@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solicitações - Onboarding</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="container mt-4 fade-in">
+
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3><i class="fas fa-users me-2"></i>Gerenciamento de Onboarding</h3>
+                <p class="mb-0">Gerencie as solicitações de acesso de novos colaboradores</p>
+            </div>
+            <div>
+                <a href="{{ url_for('main.settings') }}" class="btn btn-outline-warning me-2">
+                    <i class="fas fa-cogs me-2"></i>Ajustes
+                </a>
+                
+                <button class="btn btn-light" data-bs-toggle="collapse" data-bs-target="#newForm">
+                    <i class="fas fa-plus me-2"></i>Nova Solicitação
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapse mb-4 slide-in" id="newForm">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nova Solicitação de Acesso</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.create_request') }}" id="newRequestForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-user me-1"></i> Nome do Colaborador</label>
+                            <input name="collaborator_name" class="form-control" placeholder="Digite o nome completo" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-tag me-1"></i> Categoria</label>
+                            <select name="category_id" class="form-select" required>
+                                <option value="">Selecione uma categoria</option>
+                                {% if categories %}
+                                    {% for category in categories %}
+                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled>Nenhuma categoria cadastrada</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-calendar-alt me-1"></i> Data de Início</label>
+                            <input name="start_date" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-calendar-check me-1"></i> Data de Finalização</label>
+                            <input name="end_date" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-envelope me-1"></i> Email de Contato</label>
+                            <input name="email_contact" type="email" class="form-control" placeholder="email@exemplo.com" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-phone-alt me-1"></i> WhatsApp</label>
+                            <input name="whatsapp_number" type="tel" class="form-control" placeholder="(11) 99999-9999" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="fas fa-tasks me-1"></i> Itens do Checklist</label>
+                        <p class="text-muted small mb-2">Selecione os itens necessários para este colaborador:</p>
+                        
+                        <div class="mb-3">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" data-filter="all">Todos</button>
+                                {% for area in areas %}
+                                    <button type="button" class="btn btn-outline-primary" data-filter="{{ area.name }}">{{ area.name }}</button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="checklist-options border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            {% if checklist_templates %}
+                                {% for template in checklist_templates if not template.parent_id %}
+                                
+                                <div class="checklist-group mb-3 checklist-item" data-area="{{ template.area.name }}">
+                                    <div class="form-check">
+                                        <input class="form-check-input group-checkbox" type="checkbox" 
+                                            name="checklist_items" 
+                                            value="{{ template.id }}" 
+                                            id="group_{{ template.id }}"
+                                            data-group-id="{{ template.id }}"
+                                            {% if template.is_default %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold text-primary" for="group_{{ template.id }}">
+                                            <i class="fas fa-folder me-1"></i>{{ template.description }}
+                                            <span class="badge bg-light text-dark ms-2">{{ template.area.name }}</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="subitems ms-4 mt-2">
+                                        {% for subtemplate in template.subtemplates %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input subitem-checkbox" type="checkbox" 
+                                                name="checklist_items" 
+                                                value="{{ subtemplate.id }}" 
+                                                id="item_{{ subtemplate.id }}"
+                                                data-parent="{{ template.id }}"
+                                                {% if template.is_default and subtemplate.is_default %}checked{% endif %}>
+                                            <label class="form-check-label" for="item_{{ subtemplate.id }}">
+                                                <i class="fas fa-file-alt me-1"></i>{{ subtemplate.description }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                                    <p class="text-muted">Nenhum template de checklist disponível. Configure-os no menu de Ajustes.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-2">
+                            <small class="text-muted">Seleção rápida:</small>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="select-all">
+                                <i class="fas fa-check-square me-1"></i>Todos
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="deselect-all">
+                                <i class="fas fa-square me-1"></i>Nenhum
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#newForm">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Criar Solicitação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Buscar por nome, categoria ou status...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="badge bg-info me-3">
+                        <i class="fas fa-sync-alt me-1"></i>Total: {{ in_progress|length + closed|length }}
+                    </span>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary btn-sm active" data-filter="all">Todos</button>
+                        <button class="btn btn-outline-primary btn-sm" data-filter="in_progress">Em Andamento</button>
+                        <button class="btn btn-outline-primary btn-sm" data-filter="closed">Concluídos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <h5 class="mb-3"><i class="fas fa-spinner me-2 text-primary"></i>Processos em Andamento</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Status</th>
+                        <th>Data de Criação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for req in in_progress %}
+                    <tr class="align-middle">
+                        <td>
+                            <i class="fas fa-user-circle me-2 text-muted"></i>
+                            <a href="{{ url_for('main.request_detail', request_id=req.id) }}" class="text-decoration-none">
+                                {{ req.collaborator_name }}
+                            </a>
+                            {% if req.request_type == 'OFFBOARDING' %}
+                                <span class="badge bg-danger ms-2" style="font-size: 0.7em;">OFF</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-tag me-1"></i>{{ req.category.name if req.category else 'Sem Categoria' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if req.global_status == 'aguardando' %}
+                                <span class="badge bg-warning">
+                                    <span class="status-indicator status-waiting"></span>Aguardando
+                                </span>
+                            {% elif req.global_status == 'em_andamento' %}
+                                <span class="badge bg-primary">
+                                    <span class="status-indicator status-progress"></span>Em andamento
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <span class="status-indicator status-completed"></span>Concluído
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="date-format">{{ req.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('main.request_detail', request_id=req.id) }}" 
+                               class="btn btn-sm btn-outline-primary" 
+                               title="Ver detalhes">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">Nenhum processo em andamento</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <h5 class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i>Processos Concluídos</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Tipo</th>
+                        <th>Data de Início</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for req in closed %}
+                    <tr class="align-middle">
+                        <td>
+                            <i class="fas fa-user-check me-2 text-success"></i>
+                            <a href="{{ url_for('main.request_detail', request_id=req.id) }}" class="text-decoration-none">
+                                {{ req.collaborator_name }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-tag me-1"></i>{{ req.category.name if req.category else 'Sem Categoria' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if req.request_type == 'OFFBOARDING' %}
+                                <span class="badge bg-danger">Desligamento</span>
+                            {% else %}
+                                <span class="badge bg-success">Admissão</span>
+                            {% endif %}
+                        </td>
+                        <td class="date-format">{{ req.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('main.request_detail', request_id=req.id) }}" 
+                               class="btn btn-sm btn-outline-success" 
+                               title="Ver histórico">
+                                <i class="fas fa-history"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="fas fa-archive fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">Nenhum processo concluído</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/checklist.js') }}"></script>
+</body>
+</html>
