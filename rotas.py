@@ -3,6 +3,8 @@ from models import db, AccessRequest, ChecklistItem, ChecklistTemplate, Category
 from funcoes import calculate_global_status, normalize_phone
 from datetime import datetime
 
+from webhook_service import send_to_n8n
+
 bp = Blueprint("main", __name__)
 
 # --- FUNÇÃO AUXILIAR PARA ORGANIZAR HIERARQUIA ---
@@ -80,6 +82,7 @@ def create_request():
     except:
         sd, ed = None, None
 
+    # CRIAÇÃO DO OBJETO (Variável new_req)
     new_req = AccessRequest(
         collaborator_name=data.get("collaborator_name"),
         category_id=data.get("category_id"),
@@ -120,19 +123,43 @@ def create_request():
 
         # Inserir Filhos
         for t in children:
-            # Só insere se o pai também foi selecionado (ou lógica de negócio específica)
             if t.parent_id in template_to_item_map:
                 item = ChecklistItem(
                     request_id=new_req.id,
                     description=t.description,
                     area_id=t.area_id,
                     item_type=t.item_type,
-                    parent_id=template_to_item_map[t.parent_id], # Linka ao novo pai criado
+                    parent_id=template_to_item_map[t.parent_id],
                     status="pending"
                 )
                 db.session.add(item)
 
     db.session.commit()
+    
+    # --- INTEGRAÇÃO N8N (CORRIGIDA) ---
+    try:
+        # Carregar o nome da categoria com segurança
+        # (Às vezes o relacionamento não carrega imediato após commit, então garantimos pegando o ID)
+        cat_name = "Sem Categoria"
+        if new_req.category:
+             cat_name = new_req.category.name
+        
+        # 1. Agendar o INÍCIO
+        if new_req.start_date:
+            info_inicio = f"Categoria: {cat_name} | WhatsApp: {new_req.whatsapp_number}"
+            
+            send_to_n8n("ONBOARDING_START", new_req.collaborator_name, new_req.start_date, info_inicio)
+        
+        # 2. Agendar o TÉRMINO PREVISTO
+        if new_req.end_date:
+            info_fim = f"Data prevista no contrato. Verificar renovação."
+            
+            send_to_n8n("CONTRACT_END", new_req.collaborator_name, new_req.end_date, info_fim)
+            
+    except Exception as e:
+        print(f"Erro ao enviar para n8n: {e}") 
+    # -----------------------------------------------------
+    
     return redirect(url_for("main.request_detail", request_id=new_req.id))
 
 @bp.route("/request/<int:request_id>/revoke", methods=["POST"])

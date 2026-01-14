@@ -6,3 +6,4 @@ cryptography>=46.0.3
 dotenv>=0.21.0
 requests>=2.31.0
 phonenumbers>=8.13.20   
+requests>=2.31.0
