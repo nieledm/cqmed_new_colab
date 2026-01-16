@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editar Solicitação</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="container mt-4 fade-in">
+
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Solicitação #{{ req.id }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.edit_request', request_id=req.id) }}">
+                
+                <h6 class="border-bottom pb-2 mb-3">Dados Cadastrais</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Nome do Colaborador</label>
+                        <input name="collaborator_name" class="form-control" value="{{ req.collaborator_name }}" required />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Categoria</label>
+                        <select name="category_id" class="form-select" required>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if req.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Data de Início</label>
+                        <input name="start_date" type="date" class="form-control" value="{{ req.start_date }}" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Data de Finalização</label>
+                        <input name="end_date" type="date" class="form-control" value="{{ req.end_date }}" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Email de Contato</label>
+                        <input name="email_contact" type="email" class="form-control" value="{{ req.email_contact }}" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">WhatsApp</label>
+                        <input name="whatsapp_number" type="tel" class="form-control" value="{{ req.whatsapp_number }}" />
+                    </div>
+                </div>
+
+                <h6 class="border-bottom pb-2 mb-3 mt-4">Itens do Checklist</h6>
+                <div class="alert alert-info py-2 small">
+                    <i class="fas fa-info-circle me-1"></i> Desmarque itens para removê-los da solicitação ou marque novos para adicionar. Itens já concluídos que forem removidos serão perdidos.
+                </div>
+
+                <div class="mb-3">
+                    <div class="btn-group btn-group-sm mb-2" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-filter="all">Todos</button>
+                        {% for area in areas %}
+                            <button type="button" class="btn btn-outline-primary" data-filter="{{ area.name }}">{{ area.name }}</button>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="checklist-options border rounded p-3" style="max-height: 500px; overflow-y: auto;">
+                        {% for template in checklist_templates if not template.parent_id %}
+                        
+                        {% set is_parent_active = template.description in current_item_descriptions %}
+
+                        <div class="checklist-group mb-3 checklist-item" data-area="{{ template.area.name }}">
+                            <div class="form-check">
+                                <input class="form-check-input group-checkbox" type="checkbox" 
+                                    name="checklist_items" 
+                                    value="{{ template.id }}" 
+                                    id="group_{{ template.id }}"
+                                    data-group-id="{{ template.id }}"
+                                    {% if is_parent_active %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-primary" for="group_{{ template.id }}">
+                                    <i class="fas fa-folder me-1"></i>{{ template.description }}
+                                    <span class="badge bg-light text-dark ms-2">{{ template.area.name }}</span>
+                                </label>
+                            </div>
+                            
+                            <div class="subitems ms-4 mt-2">
+                                {% for subtemplate in template.subtemplates %}
+                                {% set is_child_active = subtemplate.description in current_item_descriptions %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input subitem-checkbox" type="checkbox" 
+                                        name="checklist_items" 
+                                        value="{{ subtemplate.id }}" 
+                                        id="item_{{ subtemplate.id }}"
+                                        data-parent="{{ template.id }}"
+                                        {% if is_child_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="item_{{ subtemplate.id }}">
+                                        <i class="fas fa-file-alt me-1"></i>{{ subtemplate.description }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('main.request_detail', request_id=req.id) }}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/checklist.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reutiliza a lógica do checklist_hierarchy.js se estiver carregada, 
+            // ou adiciona listeners básicos aqui se necessário.
+            // O checklist.js importado acima deve lidar com os filtros.
+            
+            // Script simples para lógica de Pai/Filho (Checkboxes)
+            const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+            groupCheckboxes.forEach(group => {
+                group.addEventListener('change', function() {
+                    const groupId = this.getAttribute('data-group-id');
+                    const subitems = document.querySelectorAll(`.subitem-checkbox[data-parent="${groupId}"]`);
+                    subitems.forEach(sub => sub.checked = this.checked);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -64,6 +64,10 @@
                             <span>{{ req.email_contact or '—' }}</span>
                         </div>
                         <div class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold"><i class="fab fa-whatsapp me-2 text-primary"></i>Telefone:</span>
+                            <span>{{ req.whatsapp_number or '—' }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i>Início:</span>
                             <span>{{ req.start_date.strftime('%d/%m/%Y') if req.start_date else '—' }}</span>
                         </div>
@@ -175,9 +179,9 @@
                 <button class="btn btn-outline-info">
                     <i class="fas fa-envelope me-2"></i>Notificar Usuário
                 </button>
-                <button class="btn btn-outline-warning">
+                <a href="{{ url_for('main.edit_request', request_id=req.id) }}" class="btn btn-outline-warning">
                     <i class="fas fa-edit me-2"></i>Editar Dados
-                </button>
+                </a>
             </div>
         </div>
     </div>

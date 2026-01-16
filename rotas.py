@@ -148,15 +148,6 @@ def create_request():
             info_fim = f"Data prevista no contrato. Verificar renovação."
             send_to_n8n(new_req.collaborator_name, "INICIO DO COLABORADOR ", new_req.start_date, info_inicio, "FINALIZAÇÃO DO COLABORADOR ", new_req.end_date, info_fim)
             
-
-            # def send_to_n8n(collaborator_name, 
-            #           start_event_type, 
-            #           start_date_obj, 
-            #           start_extra_info,
-            #           end_event_type, 
-            #           end_date_obj, 
-            #           end_extra_info,):
-                    
     except Exception as e:
         print(f"Erro ao enviar para n8n: {e}") 
     # -----------------------------------------------------
@@ -376,3 +367,120 @@ def delete_template(id):
     except Exception:
         db.session.rollback()
     return redirect(url_for("main.settings"))
+
+# Adicione isso em rotas.py
+
+@bp.route("/request/<int:request_id>/edit", methods=["GET", "POST"])
+def edit_request(request_id):
+    req = AccessRequest.query.get_or_404(request_id)
+    
+    # Se for POST, salva as alterações
+    if request.method == "POST":
+        data = request.form
+        
+        # 1. Atualizar Dados Básicos
+        req.collaborator_name = data.get("collaborator_name")
+        req.category_id = data.get("category_id")
+        req.email_contact = data.get("email_contact")
+        req.whatsapp_number = data.get("whatsapp_number")
+        
+        try:
+            if data.get("start_date"):
+                req.start_date = datetime.strptime(data.get("start_date"), "%Y-%m-%d").date()
+            if data.get("end_date"):
+                req.end_date = datetime.strptime(data.get("end_date"), "%Y-%m-%d").date()
+        except ValueError:
+            pass # Mantém as datas antigas ou ignora erro se formato inválido
+
+        # 2. Atualizar Checklist (Sincronização Complexa)
+        selected_template_ids = request.form.getlist("checklist_items")
+        selected_template_ids = [int(id) for id in selected_template_ids]
+        
+        # Buscar templates selecionados
+        selected_templates = ChecklistTemplate.query.filter(ChecklistTemplate.id.in_(selected_template_ids)).all()
+        selected_descriptions = {t.description for t in selected_templates}
+        
+        # A. REMOVER itens que foram desmarcados
+        # (Removemos itens cuja descrição não está mais na lista de templates selecionados)
+        # Nota: Isso assume que a descrição é única ou identificadora suficiente
+        current_items = req.checklist_items
+        for item in current_items:
+            if item.description not in selected_descriptions:
+                db.session.delete(item)
+        
+        # Flush para garantir que deleções ocorram antes de inserções (evita conflitos)
+        db.session.flush() 
+        
+        # B. ADICIONAR novos itens
+        # Mapeamos descrições existentes para não duplicar
+        existing_descriptions = {i.description for i in req.checklist_items} # Recarrega após delete
+        
+        # Mapeamento auxiliar para Pais recém criados ou existentes
+        # Precisamos saber o ID do Item Pai para vincular o Filho
+        parent_item_map = {} 
+        
+        # Vamos primeiro identificar os IDs dos itens pais que JÁ existem no banco
+        for item in req.checklist_items:
+            if not item.parent_id: # É um pai
+                # Precisamos achar qual template gera esse item para usar como chave
+                # (Procura reversa por descrição)
+                matching_template = next((t for t in selected_templates if t.description == item.description), None)
+                if matching_template:
+                    parent_item_map[matching_template.id] = item.id
+
+        # Separar templates pais e filhos selecionados
+        parents_templates = [t for t in selected_templates if not t.parent_id]
+        children_templates = [t for t in selected_templates if t.parent_id]
+        
+        # Criar Pais que faltam
+        for t in parents_templates:
+            if t.description not in existing_descriptions:
+                new_item = ChecklistItem(
+                    request_id=req.id,
+                    description=t.description,
+                    area_id=t.area_id,
+                    item_type=t.item_type,
+                    status="pending"
+                )
+                db.session.add(new_item)
+                db.session.flush() # Para pegar o ID
+                parent_item_map[t.id] = new_item.id
+                existing_descriptions.add(t.description)
+
+        # Criar Filhos que faltam
+        for t in children_templates:
+            if t.description not in existing_descriptions:
+                # Tenta achar o ID do item pai
+                parent_item_id = parent_item_map.get(t.parent_id)
+                
+                # Se o pai não foi selecionado, o filho fica orfão ou não é criado? 
+                # Pela lógica do front, se selecionou filho, o pai vem junto.
+                if parent_item_id:
+                    new_item = ChecklistItem(
+                        request_id=req.id,
+                        description=t.description,
+                        area_id=t.area_id,
+                        item_type=t.item_type,
+                        parent_id=parent_item_id,
+                        status="pending"
+                    )
+                    db.session.add(new_item)
+
+        db.session.commit()
+        flash("Solicitação atualizada com sucesso!", "success")
+        return redirect(url_for("main.request_detail", request_id=req.id))
+
+    # --- MÉTODO GET (Exibir Formulário) ---
+    categories = Category.query.filter_by(active=True).all()
+    areas = Area.query.filter_by(active=True).all()
+    templates = ChecklistTemplate.query.filter_by(is_active=True).all()
+    
+    # Cria uma lista das descrições que o usuário JÁ tem, para marcar os checkbox
+    current_item_descriptions = [i.description for i in req.checklist_items]
+
+    return render_template("request_edit.html", 
+                           req=req,
+                           categories=categories,
+                           areas=areas,
+                           checklist_templates=templates,
+                           current_item_descriptions=current_item_descriptions)
