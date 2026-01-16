@@ -43,20 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.checked = false;
         });
     });
-    
-    selectDefaultBtn.addEventListener('click', function() {
-        checkboxes.forEach(checkbox => {
-            // Resetar todos
-            checkbox.checked = false;
-        });
         
-        // Marcar apenas os padrão (isso requer um data-attribute)
-        const defaultCheckboxes = document.querySelectorAll('input[data-is-default="true"]');
-        defaultCheckboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-    });
-    
     // Auto-seleção baseada na categoria
     const categorySelect = document.querySelector('select[name="category"]');
     if (categorySelect) {
