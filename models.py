@@ -1,17 +1,40 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
-# Tabelas de Configuração (Dinâmicas para editar no front)
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(150), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    
+    # Se for usuário local, terá hash de senha. Se for LDAP, password_hash é None.
+    password_hash = db.Column(db.String(255), nullable=True)
+    
+    is_ldap = db.Column(db.Boolean, default=True)      # True = Valida no LDAP | False = Valida local
+    is_admin = db.Column(db.Boolean, default=False)     # Permissão de admin na aplicação
+    is_active = db.Column(db.Boolean, default=True)     # Permite bloquear ou conceder acesso
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+
 class Category(db.Model):
     __tablename__ = "categories"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     active = db.Column(db.Boolean, default=True)
-
-    def __repr__(self):
-        return self.name
 
 class Area(db.Model):
     __tablename__ = "areas"
@@ -19,17 +42,13 @@ class Area(db.Model):
     name = db.Column(db.String(50), nullable=False, unique=True)
     active = db.Column(db.Boolean, default=True)
 
-    def __repr__(self):
-        return self.name
-
 class AccessRequest(db.Model):
     __tablename__ = "access_requests"
 
     id = db.Column(db.Integer, primary_key=True)
-    request_type = db.Column(db.String(20), default="ONBOARDING") # ONBOARDING ou OFFBOARDING
+    request_type = db.Column(db.String(20), default="ONBOARDING")
     collaborator_name = db.Column(db.String(200), nullable=False)
     
-    # FK para Categoria
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
     category = db.relationship("Category")
 
@@ -39,7 +58,6 @@ class AccessRequest(db.Model):
     whatsapp_number = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Status global (calculado ou salvo para performance)
     global_status = db.Column(db.String(20), default="aguardando")
 
     checklist_items = db.relationship(
@@ -53,7 +71,6 @@ class ChecklistTemplate(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey("checklist_templates.id"), nullable=True)
     description = db.Column(db.String(255), nullable=False)
     
-    # FK para Area
     area_id = db.Column(db.Integer, db.ForeignKey("areas.id"), nullable=False)
     area = db.relationship("Area")
 
@@ -76,14 +93,9 @@ class ChecklistItem(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey("checklist_items.id"), nullable=True)
     
     description = db.Column(db.String(255), nullable=False)
-    
-    # Guardamos o nome da área como string ou ID. 
-    # Como áreas podem ser deletadas, guardar o ID é melhor, mas para histórico string é mais seguro.
-    # Vamos manter FK para manter consistência no painel.
     area_id = db.Column(db.Integer, db.ForeignKey("areas.id"), nullable=True)
     area = db.relationship("Area")
 
-    # Status: pending (pendente/tem acesso) | done (feito/removido)
     status = db.Column(db.String(20), default="pending")
     item_type = db.Column(db.String(20), default="task")
     updated_at = db.Column(db.DateTime)

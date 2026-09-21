@@ -43,6 +43,18 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.checked = false;
         });
     });
+
+    if (selectDefaultBtn) {
+        selectDefaultBtn.addEventListener('click', function() {
+            checkboxes.forEach(checkbox => {
+                const isDefault = checkbox.getAttribute('data-is-default') === 'true';
+                checkbox.checked = isDefault;
+                
+                // Disparar o evento change caso haja scripts de hierarquia escutando (grupos e subitens)
+                checkbox.dispatchEvent(new Event('change'));
+            });
+        });
+    }
         
     // Auto-seleção baseada na categoria
     const categorySelect = document.querySelector('select[name="category"]');
@@ -67,4 +79,64 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+});
+
+// ##################################
+// Parte nova
+// ##################################
+document.addEventListener("DOMContentLoaded", function () {
+    const parentCheckboxes = document.querySelectorAll('.parent-checkbox, .group-checkbox');
+    const childCheckboxes = document.querySelectorAll('.child-checkbox, .subitem-checkbox');
+
+    // 1. Quando clicar no PAI: se tiver filhos, marca/desmarca todos os filhos dele
+    parentCheckboxes.forEach(parentCb => {
+        parentCb.addEventListener('change', function () {
+            const parentId = this.getAttribute('data-parent-id') || this.getAttribute('data-group-id');
+            const children = document.querySelectorAll(`[data-parent-ref="${parentId}"], [data-parent="${parentId}"]`);
+            
+            // Só altera se o pai realmente tiver filhos associados
+            if (children.length > 0) {
+                children.forEach(childCb => {
+                    childCb.checked = this.checked;
+                });
+            }
+        });
+    });
+
+    // 2. Quando clicar em um FILHO: atualiza o estado do pai
+    childCheckboxes.forEach(childCb => {
+        childCb.addEventListener('change', function () {
+            const parentId = this.getAttribute('data-parent-ref') || this.getAttribute('data-parent');
+            if (parentId) {
+                updateParentState(parentId);
+            }
+        });
+    });
+
+    // Função para atualizar o Pai com base nos filhos
+    function updateParentState(parentId) {
+        const parentCb = document.querySelector(`[data-parent-id="${parentId}"], [data-group-id="${parentId}"]`);
+        if (!parentCb) return;
+
+        const children = document.querySelectorAll(`[data-parent-ref="${parentId}"], [data-parent="${parentId}"]`);
+
+        // IMPORTANTE: Se o pai NÃO tem filhos, não altera o estado dele!
+        if (children.length === 0) return;
+
+        // Se tiver pelo menos 1 filho marcado, marca o pai. Se 0, desmarca.
+        const anyChecked = Array.from(children).some(child => child.checked);
+        parentCb.checked = anyChecked;
+    }
+
+    // 3. Executa ao carregar a página apenas para os pais QUE POSSUEM filhos
+    parentCheckboxes.forEach(parentCb => {
+        const parentId = parentCb.getAttribute('data-parent-id') || parentCb.getAttribute('data-group-id');
+        if (parentId) {
+            const children = document.querySelectorAll(`[data-parent-ref="${parentId}"], [data-parent="${parentId}"]`);
+            // Só roda a atualização automática inicial se existirem filhos cadastrados
+            if (children.length > 0) {
+                updateParentState(parentId);
+            }
+        }
+    });
 });

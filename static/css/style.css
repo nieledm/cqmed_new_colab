@@ -240,3 +240,110 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ===== Novo layout do header e barra de ações ===== */
+
+/* Botão Sair dentro do header */
+.btn-logout {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    padding: 0.55rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(4px);
+}
+
+.btn-logout:hover {
+    background: #fff;
+    color: var(--danger-color);
+    border-color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.btn-logout i {
+    font-size: 1rem;
+}
+
+/* Barra de ações compacta abaixo do header */
+.action-bar {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1.1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    border: 2px solid transparent;
+    transition: all 0.25s ease;
+    background: transparent;
+}
+
+/* Ajustes */
+.btn-settings {
+    color: var(--warning-color);
+    border-color: rgba(248, 150, 30, 0.4);
+}
+.btn-settings:hover {
+    background: var(--warning-color);
+    color: #fff;
+    border-color: var(--warning-color);
+    transform: translateY(-2px);
+}
+
+/* Nova Solicitação */
+.btn-new {
+    color: #fff;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-new:hover {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+}
+
+/* Gerenciar Usuários */
+.btn-users {
+    color: var(--secondary-color);
+    border-color: rgba(63, 55, 201, 0.4);
+}
+.btn-users:hover {
+    background: var(--secondary-color);
+    color: #fff;
+    border-color: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .action-bar {
+        flex-direction: column;
+    }
+    .action-bar .btn-action {
+        width: 100%;
+        justify-content: center;
+    }
+    .btn-logout {
+        margin-top: 0.75rem;
+    }
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+}

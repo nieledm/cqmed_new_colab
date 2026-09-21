@@ -11,7 +11,7 @@
     <div class="page-header mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm mb-2">
+                <a href="{{ url_for('requests.index') }}" class="btn btn-light btn-sm mb-2">
                     <i class="fas fa-arrow-left me-2"></i>Voltar para lista
                 </a>
                 <h4 class="mb-0">
@@ -25,7 +25,7 @@
             </div>
             <div class="d-flex gap-2">
                 {% if req.request_type == 'ONBOARDING' and global_status == 'concluido' %}
-                <form action="{{ url_for('main.create_revocation', request_id=req.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja iniciar o processo de desligamento para este colaborador?');">
+                <form action="{{ url_for('requests.create_revocation', request_id=req.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja iniciar o processo de desligamento para este colaborador?');">
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-user-times me-2"></i>Iniciar Desligamento
                     </button>
@@ -109,7 +109,7 @@
                             {% for item in items %}
                             <div class="checklist-group-item mb-2 p-3 rounded border bg-white shadow-sm">
                                 
-                                <form action="{{ url_for('main.toggle_checklist', item_id=item.id) }}" method="POST" class="d-flex align-items-center">
+                                <form action="{{ url_for('requests.toggle_checklist', item_id=item.id) }}" method="POST" class="d-flex align-items-center">
                                     
                                     {% set is_checked = (req.request_type == 'ONBOARDING' and item.status == 'done') or 
                                                         (req.request_type == 'OFFBOARDING' and item.status == 'pending') %}
@@ -135,7 +135,7 @@
                                     <div class="subitems mt-2 ms-5 ps-3 border-start border-3 border-light">
                                         {% for child in item.children_list %}
                                             <div class="checklist-subitem py-2 border-bottom border-light">
-                                                <form action="{{ url_for('main.toggle_checklist', item_id=child.id) }}" method="POST" class="d-flex align-items-center">
+                                                <form action="{{ url_for('requests.toggle_checklist', item_id=child.id) }}" method="POST" class="d-flex align-items-center">
                                                     
                                                     {% set child_checked = (req.request_type == 'ONBOARDING' and child.status == 'done') or 
                                                                            (req.request_type == 'OFFBOARDING' and child.status == 'pending') %}
@@ -179,7 +179,7 @@
                 <button class="btn btn-outline-info">
                     <i class="fas fa-envelope me-2"></i>Notificar Usuário
                 </button>
-                <a href="{{ url_for('main.edit_request', request_id=req.id) }}" class="btn btn-outline-warning">
+                <a href="{{ url_for('requests.edit_request', request_id=req.id) }}" class="btn btn-outline-warning">
                     <i class="fas fa-edit me-2"></i>Editar Dados
                 </a>
             </div>
@@ -188,5 +188,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/checklist.js') }}"></script>
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {            
+            // Script simples para lógica de Pai/Filho (Checkboxes)
+            const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+            groupCheckboxes.forEach(group => {
+                group.addEventListener('change', function() {
+                    const groupId = this.getAttribute('data-group-id');
+                    const subitems = document.querySelectorAll(`.subitem-checkbox[data-parent="${groupId}"]`);
+                    subitems.forEach(sub => sub.checked = this.checked);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,10 +1,18 @@
+import os
+import sys
+
+# Adiciona a pasta raiz do projeto ao sys.path para localizar o app.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app import create_app
-from models import db, Category, Area, ChecklistTemplate
+from models import db, Category, Area, ChecklistTemplate, User
 
 app = create_app()
 
 with app.app_context():
-    print("--- Iniciando Populacao do Banco de Dados ---")
+    db.create_all()
+    
+    print("--- Iniciando População do Banco de Dados ---")
 
     # 1. Criar Áreas
     areas = ["TI", "Lab manager", "RH", "Comunicação"]
@@ -20,7 +28,7 @@ with app.app_context():
     
     db.session.commit() # Commit para gerar os IDs das áreas
 
-    # 2. Criar Categorias (Isso resolve o problema do select vazio)
+    # 2. Criar Categorias
     categorias = [
         "Funcionário/Bolsista Padrão",
         "Colaborador",
@@ -36,42 +44,38 @@ with app.app_context():
             db.session.add(Category(name=nome))
             print(f"Criada Categoria: {nome}")
 
-    # 3. Criar Templates de Checklist (Isso resolve a mensagem de 'Nenhum template')
-    # Exemplo: Item Pai -> Item Filho
-    
-    # Template TI
+    # 3. Criar Templates de Checklist
     if "TI" in db_areas:
         area_ti = db_areas["TI"]
                 
-        if not ChecklistTemplate.query.filter_by (description="Adicionar ao grupo de email CQMED").first():
-            db.session.add(ChecklistTemplate(description="Adicionar ao grupo de email CQMED", area_id=area_ti.id))
+        if not ChecklistTemplate.query.filter_by(description="Adicionar ao grupo de email CQMED").first():
+            db.session.add(ChecklistTemplate(description="Adicionar ao grupo de email CQMED", area_id=area_ti.id, is_default=True))
             print("Criado Template TI: Grupo de Email")
 
-        if not ChecklistTemplate.query.filter_by (description="Adicionar  à intranet").first():
-            db.session.add(ChecklistTemplate(description="Adicionar à intranet", area_id=area_ti.id))
+        if not ChecklistTemplate.query.filter_by(description="Adicionar à intranet").first():
+            db.session.add(ChecklistTemplate(description="Adicionar à intranet", area_id=area_ti.id, is_default=True))
             print("Criado Template TI: Intranet")
 
-        if not ChecklistTemplate.query.filter_by (description="Adicionar ao WhatsApp").first():
+        if not ChecklistTemplate.query.filter_by(description="Adicionar ao WhatsApp").first():
             db.session.add(ChecklistTemplate(description="Adicionar ao WhatsApp", area_id=area_ti.id))
             print("Criado Template TI: WhatsApp")
         
-        if not ChecklistTemplate.query.filter_by (description="Fazer VPN").first():
+        if not ChecklistTemplate.query.filter_by(description="Fazer VPN").first():
             db.session.add(ChecklistTemplate(description="Fazer VPN", area_id=area_ti.id))
             print("Criado Template TI: VPN")
 
-        if not ChecklistTemplate.query.filter_by (description="Criar usuário no servidor").first():
-            db.session.add(ChecklistTemplate(description="Criar usuário no servidor", area_id=area_ti.id))
+        if not ChecklistTemplate.query.filter_by(description="Criar usuário no servidor").first():
+            db.session.add(ChecklistTemplate(description="Criar usuário no servidor", area_id=area_ti.id, is_default=True))
             print("Criado Template TI: Usuário no Servidor")
 
-        #Pai
+        # Pai Mesa/Desktop
         mesa_setup = ChecklistTemplate.query.filter_by(description="Mesa/Desktop").first()
-        if not ChecklistTemplate.query.filter_by (description="Mesa").first():
-            if not mesa_setup:
-                mesa_setup = ChecklistTemplate(description="Mesa/Desktop", area_id=area_ti.id, item_type="group")
-                db.session.add(mesa_setup)
-                db.session.flush() # Para ter o ID
+        if not mesa_setup:
+            mesa_setup = ChecklistTemplate(description="Mesa/Desktop", area_id=area_ti.id, item_type="group")
+            db.session.add(mesa_setup)
+            db.session.flush()
             
-            #Filhos
+            # Filhos
             db.session.add(ChecklistTemplate(description="Mesa", area_id=area_ti.id, parent_id=mesa_setup.id))
             db.session.add(ChecklistTemplate(description="Desktop", area_id=area_ti.id, parent_id=mesa_setup.id))
             print("Criado Template TI: Mesa/Desktop")
@@ -81,11 +85,11 @@ with app.app_context():
         if not biometria_setup:
             biometria_setup = ChecklistTemplate(description="Biometria", area_id=area_ti.id, item_type="group")
             db.session.add(biometria_setup)
-            db.session.flush() # Para ter o ID
+            db.session.flush()
             
             # Filhos Biometria
             db.session.add(ChecklistTemplate(description="CQMED", area_id=area_ti.id, parent_id=biometria_setup.id))
-            db.session.add(ChecklistTemplate(description="CQMED - Comercial", area_id=area_ti.id, parent_id=biometria_setup.id))
+            db.session.add(ChecklistTemplate(description="CQMED - Comercial", area_id=area_ti.id, parent_id=biometria_setup.id, is_default=True))
             db.session.add(ChecklistTemplate(description="Cultura de Células", area_id=area_ti.id, parent_id=biometria_setup.id))
             db.session.add(ChecklistTemplate(description="Cultura de Células - Comercial", area_id=area_ti.id, parent_id=biometria_setup.id))
             db.session.add(ChecklistTemplate(description="Massas (LACTAD)", area_id=area_ti.id, parent_id=biometria_setup.id))
@@ -99,10 +103,10 @@ with app.app_context():
         if not softwares_setup:
             softwares_setup = ChecklistTemplate(description="Softwares", area_id=area_ti.id, item_type="group")
             db.session.add(softwares_setup)
-            db.session.flush() # Para ter o ID
+            db.session.flush()
             
             # Filhos Softwares
-            db.session.add(ChecklistTemplate(description="Scarab", area_id=area_ti.id, parent_id=softwares_setup.id))
+            db.session.add(ChecklistTemplate(description="Scarab", area_id=area_ti.id, parent_id=softwares_setup.id, is_default=True))
             db.session.add(ChecklistTemplate(description="Phenix", area_id=area_ti.id, parent_id=softwares_setup.id))
             db.session.add(ChecklistTemplate(description="XDS", area_id=area_ti.id, parent_id=softwares_setup.id))
             db.session.add(ChecklistTemplate(description="CCP4", area_id=area_ti.id, parent_id=softwares_setup.id))
@@ -121,12 +125,12 @@ with app.app_context():
             db.session.add(ChecklistTemplate(description="Mass Lynx", area_id=area_ti.id, parent_id=softwares_setup.id))
             print("Criado Template TI: Softwares")
 
-        # Pai Acesso a servidores de bioinformatica
+        # Pai Acesso a servidores de bioinformática
         bioinfo_setup = ChecklistTemplate.query.filter_by(description="Acesso a Servidores de Bioinformática").first()
         if not bioinfo_setup:
             bioinfo_setup = ChecklistTemplate(description="Acesso a Servidores de Bioinformática", area_id=area_ti.id, item_type="group")
             db.session.add(bioinfo_setup)
-            db.session.flush() # Para ter o ID
+            db.session.flush()
             
             # Filhos Bioinfo
             db.session.add(ChecklistTemplate(description="Hypatia", area_id=area_ti.id, parent_id=bioinfo_setup.id))
@@ -134,7 +138,6 @@ with app.app_context():
             db.session.add(ChecklistTemplate(description="Fujita", area_id=area_ti.id, parent_id=bioinfo_setup.id))
             db.session.add(ChecklistTemplate(description="Oscuria", area_id=area_ti.id, parent_id=bioinfo_setup.id))
             print("Criado Template TI: Acesso a Servidores de Bioinformática")
-
 
     # Template RH
     if "RH" in db_areas:
@@ -145,3 +148,25 @@ with app.app_context():
 
     db.session.commit()
     print("--- Banco populado com sucesso! ---")
+
+    print("--- Inicializando Admin e Dados Padrão ---")
+
+    # 4. Criar Usuário Admin Local (Se não existir)
+    admin_user = User.query.filter_by(username="admin").first()
+    if not admin_user:
+        admin_user = User(
+            username="admin",
+            name="Administrador do Sistema",
+            email="tihub@unicamp.br",
+            is_ldap=False,   # Login local
+            is_admin=True,
+            is_active=True
+        )
+        if hasattr(admin_user, 'set_password'):
+            admin_user.set_password("admin123")
+        
+        db.session.add(admin_user)
+        print("✅ Usuário Local 'admin' criado com sucesso.")
+
+    db.session.commit()
+    print("--- Concluído com sucesso ---")

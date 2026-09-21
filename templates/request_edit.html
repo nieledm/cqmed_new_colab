@@ -13,7 +13,7 @@
             <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Solicitação #{{ req.id }}</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('main.edit_request', request_id=req.id) }}">
+            <form method="POST" action="{{ url_for('requests.edit_request', request_id=req.id) }}">
                 
                 <h6 class="border-bottom pb-2 mb-3">Dados Cadastrais</h6>
                 <div class="row">
@@ -106,7 +106,7 @@
                 </div>
                 
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="{{ url_for('main.request_detail', request_id=req.id) }}" class="btn btn-secondary">
+                    <a href="{{ url_for('requests.request_detail', request_id=req.id) }}" class="btn btn-secondary">
                         Cancelar
                     </a>
                     <button type="submit" class="btn btn-primary">
