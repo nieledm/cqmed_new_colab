@@ -115,7 +115,7 @@
                                                         (req.request_type == 'OFFBOARDING' and item.status == 'pending') %}
                                     
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" onchange="this.form.submit()" style="cursor: pointer; transform: scale(1.2);" {% if is_checked %}checked{% endif %}>
+                                        <input class="form-check-input parent-checkbox" type="checkbox" onchange="this.form.submit()" style="cursor: pointer; transform: scale(1.2);" {% if is_checked %}checked{% endif %}>
                                     </div>
 
                                     <div class="ms-3 flex-grow-1">
@@ -141,7 +141,7 @@
                                                                            (req.request_type == 'OFFBOARDING' and child.status == 'pending') %}
                                                     
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" onchange="this.form.submit()" {% if child_checked %}checked{% endif %}>
+                                                        <input class="form-check-input parent-checkbox" type="checkbox" onchange="this.form.submit()" {% if child_checked %}checked{% endif %}>
                                                     </div>
                                                     
                                                     <div class="ms-2">

@@ -1,7 +1,10 @@
 venv/
 .venv/
+.env
 __pycache__/
 *.pyc
-onboarding.db
-.env
 instance/
+*.py[cod]
+*.sqlite3
+*.db
+*.log

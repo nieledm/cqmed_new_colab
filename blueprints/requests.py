@@ -124,13 +124,65 @@ def request_detail(request_id):
         global_status=global_status,
     )
 
+# @requests_bp.route("/checklist/<int:item_id>/toggle", methods=["POST"])
+# @login_required
+# def toggle_checklist(item_id):
+#     item = ChecklistItem.query.get_or_404(item_id)
+#     item.status = "done" if item.status == "pending" else "pending"
+#     item.updated_at = datetime.utcnow()
+#     db.session.commit()
+#     return redirect(url_for("requests.request_detail", request_id=item.request_id))
+
 @requests_bp.route("/checklist/<int:item_id>/toggle", methods=["POST"])
 @login_required
 def toggle_checklist(item_id):
+    # 1. Busca o item acionado usando o nome correto do Model (ChecklistItem)
     item = ChecklistItem.query.get_or_404(item_id)
-    item.status = "done" if item.status == "pending" else "pending"
+    req = item.request  # Relacionamento com a solicitação mãe
+
+    # Define os estados possíveis
+    STATUS_DONE = 'done'
+    STATUS_PENDING = 'pending'
+
+    # Alterna o status do item atual
+    new_status = STATUS_PENDING if item.status == STATUS_DONE else STATUS_DONE
+    item.status = new_status
     item.updated_at = datetime.utcnow()
+
+    # -------------------------------------------------------------
+    # REGRA 1: Se o item alterado é um PAI (tem subitens)
+    # -------------------------------------------------------------
+    children = ChecklistItem.query.filter_by(
+        request_id=item.request_id, 
+        parent_id=item.id
+    ).all()
+
+    if children:
+        for child in children:
+            child.status = new_status
+            child.updated_at = datetime.utcnow()
+
+    # -------------------------------------------------------------
+    # REGRA 2: Se o item alterado é um FILHO (possui parent_id)
+    # -------------------------------------------------------------
+    if item.parent_id:
+        parent = ChecklistItem.query.get(item.parent_id)
+        if parent:
+            # Busca todos os irmãos (outros filhos do mesmo pai)
+            siblings = ChecklistItem.query.filter_by(
+                request_id=item.request_id, 
+                parent_id=parent.id
+            ).all()
+
+            # O PAI só vira 'done' se TODOS os filhos estiverem 'done'.
+            # Se pelo menos 1 filho estiver pendente, o PAI fica 'pending'.
+            all_done = all(sibling.status == STATUS_DONE for sibling in siblings)
+            parent.status = STATUS_DONE if all_done else STATUS_PENDING
+            parent.updated_at = datetime.utcnow()
+
     db.session.commit()
+    
+    # Redireciona para a mesma rota original "requests.request_detail"
     return redirect(url_for("requests.request_detail", request_id=item.request_id))
 
 @requests_bp.route("/request/<int:request_id>/revoke", methods=["POST"])
